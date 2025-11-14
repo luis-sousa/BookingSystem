@@ -1,0 +1,6 @@
+@RoomService_HostAddress = http://localhost:5224
+
+GET {{RoomService_HostAddress}}/room/
+Accept: application/json
+
+###

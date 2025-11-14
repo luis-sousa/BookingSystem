@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # ----------------------------
+  # Backend microservices
+  # ----------------------------
+  user_service:
+    build:
+      context: ./src/UserService
+      dockerfile: Dockerfile
+    ports:
+      - "5001:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=1234567890!
+      - JWT__Key=MinhaChaveSecreta123!
+    depends_on: #Garante que os serviços só tentem subir depois que as dependências essenciais (db, redis, rabbitmq) estejam iniciadas.
+      - db
+      - rabbitmq
+      - redis
+
+  room_service:
+    build:
+      context: ./src/RoomService
+      dockerfile: Dockerfile
+    ports:
+      - "5002:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=1234567890!
+    depends_on:
+      - db
+      - redis
+
+  reservation_service:
+    build:
+      context: ./src/ReservationService
+      dockerfile: Dockerfile
+    ports:
+      - "5003:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=1234567890!
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+
+  notification_service:
+    build:
+      context: ./src/NotificationService
+      dockerfile: Dockerfile
+    ports:
+      - "5004:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=1234567890!
+    depends_on:
+      - db
+      - rabbitmq
+
+  # ----------------------------
+  # Database
+  # ----------------------------
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=1234567890!
+    ports:
+      - "1433:1433"
+    volumes:
+      - db_data:/var/opt/mssql
+
+  # ----------------------------
+  # RabbitMQ for messaging
+  # ----------------------------
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # porta do broker
+      - "15672:15672" # porta do dashboard
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+
+  # ----------------------------
+  # Redis cache
+  # ----------------------------
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  db_data:

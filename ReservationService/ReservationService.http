@@ -1,0 +1,6 @@
+@ReservationService_HostAddress = http://localhost:5155
+
+GET {{ReservationService_HostAddress}}/reservation/
+Accept: application/json
+
+###
