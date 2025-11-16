@@ -1,30 +1,48 @@
-# Acesse https://aka.ms/customizecontainer para saber como personalizar seu contêiner de depuração e como o Visual Studio usa este Dockerfile para criar suas imagens para uma depuração mais rápida.
-
-# Esta fase é usada durante a execução no VS no modo rápido (Padrão para a configuração de Depuração)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
-
-# Esta fase é usada para compilar o projeto de serviço
+# -----------------------------
+# Stage 1: Build
+# -----------------------------
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["ReservationService/ReservationService.csproj", "ReservationService/"]
-RUN dotnet restore "./ReservationService/ReservationService.csproj"
-COPY . .
-WORKDIR "/src/ReservationService"
-RUN dotnet build "./ReservationService.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# Esta fase é usada para publicar o projeto de serviço a ser copiado para a fase final
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./ReservationService.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+# Copia os arquivos do csproj e restaura dependências
+COPY *.csproj ./
+RUN dotnet restore
 
-# Esta fase é usada na produção ou quando executada no VS no modo normal (padrão quando não está usando a configuração de Depuração)
-FROM base AS final
+# Copia todo o código
+COPY . ./
+
+# Build para produção (Release) por padrão
+ARG DOTNET_ENVIRONMENT=Production
+RUN if [ "$DOTNET_ENVIRONMENT" = "Production" ]; then \
+        dotnet publish -c Release -o /app/publish ; \
+    else \
+        echo "Development build, skip publish" ; \
+    fi
+
+# -----------------------------
+# Stage 2: Runtime
+# -----------------------------
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "ReservationService.dll"]
+
+# Variáveis de ambiente padrão
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV ASPNETCORE_URLS=http://+:80
+
+# Copia arquivos da build para produção
+ARG DOTNET_ENVIRONMENT=Production
+COPY --from=build /app/publish ./
+
+# Para dev: copia todo o código para hot reload
+COPY --from=build /src ./
+
+# Porta exposta
+EXPOSE 80
+
+# Comando padrão para rodar
+ARG DOTNET_ENVIRONMENT=Production
+CMD if [ "$DOTNET_ENVIRONMENT" = "Production" ]; then \
+        dotnet ReservationService.dll ; \
+    else \
+        dotnet watch run --urls=http://+:80 ; \
+    fi

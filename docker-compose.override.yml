@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # ----------------------------
+  # Backend microservices (Dev)
+  # ----------------------------
+
+  user_service:
+    build:
+      context: ./UserService
+      dockerfile: Dockerfile
+      target: build  # Usa o stage 'build' que contem o SDK
+    image: userservice-dev
+    working_dir: /src
+    volumes:
+    - ./UserService:/src:cached   # Monta apenas codigo fonte, bin/obj do container nao sobrescreve host
+    - /src/bin                    # Ignora bin do container
+    - /src/obj                    # Ignora obj do container
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+    command: /bin/bash -c "dotnet watch run --urls=http://+:80" 
+    ports:
+      - "5001:80"
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+
+  room_service:
+    volumes:
+      - ./RoomService:/app
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+    command: dotnet watch run --urls=http://+:80
+
+  reservation_service:
+    volumes:
+      - ./ReservationService:/app
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+    command: dotnet watch run --urls=http://+:80
+
+  notification_service:
+    volumes:
+      - ./NotificationService:/app
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+    command: dotnet watch run --urls=http://+:80

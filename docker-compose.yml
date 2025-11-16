@@ -2,45 +2,46 @@ version: '3.8'
 
 services:
   # ----------------------------
-  # Backend microservices
+  # Backend microservices BASE/PROD
   # ----------------------------
   user_service:
     build:
-      context: ./src/UserService
+      context: ./UserService
       dockerfile: Dockerfile
+      target: runtime  # usa apenas stage de runtime
+    image: userservice-prod
     ports:
       - "5001:80"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=1234567890!
-      - JWT__Key=MinhaChaveSecreta123!
-    depends_on: #Garante que os serviços só tentem subir depois que as dependências essenciais (db, redis, rabbitmq) estejam iniciadas.
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DOTNET_RUNNING_IN_CONTAINER=true
+    depends_on:
       - db
-      - rabbitmq
       - redis
+      - rabbitmq
 
   room_service:
     build:
-      context: ./src/RoomService
+      context: ./RoomService
       dockerfile: Dockerfile
     ports:
       - "5002:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=1234567890!
+      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=tubarao16H!4121
     depends_on:
       - db
       - redis
 
   reservation_service:
     build:
-      context: ./src/ReservationService
+      context: ./ReservationService
       dockerfile: Dockerfile
     ports:
       - "5003:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=1234567890!
+      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=tubarao16H!4121
     depends_on:
       - db
       - redis
@@ -48,13 +49,13 @@ services:
 
   notification_service:
     build:
-      context: ./src/NotificationService
+      context: ./NotificationService
       dockerfile: Dockerfile
     ports:
       - "5004:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=1234567890!
+      - ConnectionStrings__DefaultConnection=Server=db;Database=BookingDb;User Id=sa;Password=tubarao16H!4121
     depends_on:
       - db
       - rabbitmq
@@ -66,7 +67,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=1234567890!
+      - SA_PASSWORD=tubarao16H!4121
     ports:
       - "1433:1433"
     volumes:
@@ -74,7 +75,7 @@ services:
 
   # ----------------------------
   # RabbitMQ for messaging
-  # ----------------------------
+  # ----------------------------    
   rabbitmq:
     image: rabbitmq:3-management
     ports:
@@ -94,3 +95,4 @@ services:
 
 volumes:
   db_data:
+  

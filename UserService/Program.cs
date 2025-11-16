@@ -1,15 +1,41 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Microsoft.EntityFrameworkCore;
+using UserService.Data;
+using UserService.Mapping;
+using UserService.Repositories;
+using UserService.Services;
+using UserService.Validators;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Add DbContext
+builder.Services.AddDbContext<UserDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Add repositories & services
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserAuthService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddAutoMapper(typeof(UserProfile));
+builder.Services.AddValidatorsFromAssemblyContaining<CreateUserValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<PatchUserValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<LoginValidator>();
+
+// Add controllers & swagger
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddFluentValidationAutoValidation(); //fui eu que pus por causa do fluent validation
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddControllers().AddNewtonsoftJson();  // habilita suporte a JsonPatchDocument
+
+
+// Aqui você registra seus serviços/repositórios
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -17,9 +43,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
