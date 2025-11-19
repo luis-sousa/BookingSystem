@@ -1,31 +1,27 @@
-# =========================
-# Stage 1: Build
-# =========================
+# ================================
+# Stage 1 — Build
+# ================================
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copia csproj e restaura dependências (cacheável)
+# Copia o csproj e restaura
 COPY *.csproj ./
 RUN dotnet restore
 
-# Copia todo o código
+# Copia todo o código restante
 COPY . ./
-
-# Build e publish para produção
 RUN dotnet publish -c Release -o /app/publish
 
-# =========================
-# Stage 2: Runtime (prod)
-# =========================
+# ================================
+# Stage 2 — Runtime
+# ================================
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
+
+ENV ASPNETCORE_URLS=http://+:80
 EXPOSE 80
 
-# Copia do build
-COPY --from=build /app/publish ./
-
-# Variáveis padrão
-ENV ASPNETCORE_URLS=http://+:80
-ENV DOTNET_RUNNING_IN_CONTAINER=true
+# Copia apenas artefatos prontos
+COPY --from=build /app/publish .
 
 ENTRYPOINT ["dotnet", "UserService.dll"]

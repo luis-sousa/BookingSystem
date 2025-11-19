@@ -9,7 +9,9 @@ using UserService.Services;
 namespace UserService.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v{version:apiVersion}/User")]
+    [ApiVersion("1.0")]
+    [ApiVersion("2.0")]
     public class UserController : ControllerBase
     {
         private readonly IUserService _service;

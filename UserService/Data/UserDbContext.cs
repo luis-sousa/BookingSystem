@@ -16,7 +16,7 @@ namespace UserService.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Tabela Users
+            // Table Users
             modelBuilder.Entity<User>(entity =>
             {
                 entity.ToTable("Users");
@@ -48,13 +48,13 @@ namespace UserService.Data
                 entity.Property(x => x.UpdatedAt)
                     .HasDefaultValueSql("GETUTCDATE()");
 
-                // Email único
+                // Email unique
                 entity.HasIndex(x => x.Email)
                     .IsUnique();
             });
         }
 
-        // Atualiza UpdatedAt automaticamente
+        // Update UpdatedAt automatically
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             var entries = ChangeTracker.Entries<User>();
@@ -69,6 +69,7 @@ namespace UserService.Data
 
             return base.SaveChangesAsync(cancellationToken);
         }
+
     }
 }
 
