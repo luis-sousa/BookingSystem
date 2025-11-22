@@ -3,7 +3,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using UserService.DTOs;
-using UserService.Models;
 
 namespace UserService.Services
 {
@@ -26,12 +25,12 @@ namespace UserService.Services
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new List<Claim>
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, user.IdUser.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Role, role),
-            new Claim("uid", user.IdUser.ToString())
-        };
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.IdUser.ToString()),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(ClaimTypes.Role, role),
+                new Claim("uid", user.IdUser.ToString())
+            };
 
             var token = new JwtSecurityToken(
                 issuer: _issuer,

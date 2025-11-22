@@ -1,6 +1,4 @@
-﻿using AutoMapper;
-using FluentValidation;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using UserService.DTOs;
@@ -16,157 +14,95 @@ namespace UserService.Controllers
     {
         private readonly IUserService _service;
         private readonly IJwtService _jwt;
-        private readonly IMapper _mapper;
-        private readonly IValidator<CreateUserDto> _createValidator;
-        private readonly IValidator<UpdateUserDto> _updateValidator;
-        private readonly IValidator<JsonPatchDocument<UpdateUserDto>> _patchValidator;
-        private readonly IValidator<LoginDto> _loginValidator;
 
-        public UserController(
-            IUserService service,
-            IJwtService jwt,
-            IMapper mapper,
-            IValidator<CreateUserDto> createValidator,
-            IValidator<UpdateUserDto> updateValidator,
-            IValidator<JsonPatchDocument<UpdateUserDto>> patchValidator,
-            IValidator<LoginDto> loginValidator)
+        public UserController(IUserService service, IJwtService jwt)
         {
             _service = service;
             _jwt = jwt;
-            _mapper = mapper;
-            _createValidator = createValidator;
-            _updateValidator = updateValidator;
-            _patchValidator = patchValidator;
-            _loginValidator = loginValidator;
         }
 
-        // ----------------------------
         // GET /api/user
-        // ----------------------------
         [HttpGet]
-        [Authorize] // qualquer usuário autenticado
+        [Authorize]
         [ProducesResponseType(typeof(List<UserDto>), 200)]
-        public async Task<IActionResult> GetAll()
+        public async Task<ActionResult<List<UserDto>>> GetAll()
         {
             var users = await _service.GetAllAsync();
             return Ok(users);
         }
 
-        // ----------------------------
         // GET /api/user/{id}
-        // ----------------------------
         [HttpGet("{id}")]
         [Authorize]
         [ProducesResponseType(typeof(UserDto), 200)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<ActionResult<UserDto>> GetById(int id)
         {
             var user = await _service.GetByIdAsync(id);
-            if (user == null) return NotFound();
-            return Ok(user);
+            return user != null ? Ok(user) : NotFound();
         }
 
-        // ----------------------------
         // POST /api/user
-        // ----------------------------
         [HttpPost]
-        [AllowAnonymous] // qualquer pessoa pode criar/login
+        [AllowAnonymous]
         [ProducesResponseType(typeof(UserDto), 201)]
         [ProducesResponseType(400)]
-        public async Task<IActionResult> Create([FromBody] CreateUserDto dto)
+        public async Task<ActionResult<UserDto>> Create(CreateUserDto dto)
         {
-            var validation = await _createValidator.ValidateAsync(dto);
-            if (!validation.IsValid)
-                return BadRequest(validation.Errors);
-
-            if (await _service.EmailExistsAsync(dto.Email))
-                return BadRequest("Email já existe");
-
             var user = await _service.CreateAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = user.IdUser }, user);
         }
 
-        // ----------------------------
         // PUT /api/user/{id}
-        // ----------------------------
         [HttpPut("{id}")]
         [Authorize]
         [ProducesResponseType(typeof(UserDto), 200)]
-        [ProducesResponseType(404)]
         [ProducesResponseType(400)]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto dto)
+        [ProducesResponseType(404)]
+        public async Task<ActionResult<UserDto>> Update(int id, UpdateUserDto dto)
         {
-            var validation = await _updateValidator.ValidateAsync(dto);
-            if (!validation.IsValid)
-                return BadRequest(validation.Errors);
-
             var updated = await _service.UpdateAsync(id, dto);
-            if (updated == null) return NotFound();
-            return Ok(updated);
+            return updated != null ? Ok(updated) : NotFound();
         }
 
-        // ----------------------------
         // PATCH /api/user/{id}
-        // ----------------------------
         [HttpPatch("{id}")]
         [Authorize]
         [ProducesResponseType(typeof(UserDto), 200)]
-        [ProducesResponseType(404)]
         [ProducesResponseType(400)]
-        public async Task<IActionResult> Patch(int id, [FromBody] JsonPatchDocument<UpdateUserDto> patchDoc)
+        [ProducesResponseType(404)]
+        public async Task<ActionResult<UserDto>> Patch(int id, JsonPatchDocument<UpdateUserDto> patch)
         {
-            var validation = await _patchValidator.ValidateAsync(patchDoc);
-            if (!validation.IsValid) return BadRequest(validation.Errors);
-
-            var user = await _service.GetByIdAsync(id);
-            if (user == null) return NotFound();
-
-            var userToPatch = _mapper.Map<UpdateUserDto>(user);
-            patchDoc.ApplyTo(userToPatch, ModelState);
-
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
-            var updated = await _service.PatchAsync(id, userToPatch);
-            return Ok(updated);
+            var updated = await _service.PatchAsync(id, patch);
+            return updated != null ? Ok(updated) : NotFound();
         }
 
-        // ----------------------------
         // DELETE /api/user/{id}
-        // ----------------------------
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")] // só admin pode deletar
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> Delete(int id)
         {
-            var success = await _service.DeleteAsync(id);
-            if (!success) return NotFound();
-            return NoContent(); // 204
+            var deleted = await _service.DeleteAsync(id);
+            return deleted ? NoContent() : NotFound();
         }
 
-        // ----------------------------
         // POST /api/user/login
-        // ----------------------------
         [HttpPost("login")]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(string), 200)] // JWT token
+        [ProducesResponseType(typeof(AuthDto), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(401)]
-        public async Task<IActionResult> Login([FromBody] LoginDto dto)
+        public async Task<ActionResult<AuthDto>> Login(LoginDto dto)
         {
-            var validation = await _loginValidator.ValidateAsync(dto);
-            if (!validation.IsValid) return BadRequest(validation.Errors);
+            var authResult = await _service.LoginAsync(dto.Email, dto.Password);
 
-            var userEntity = await _service.LoginAsync(dto.Email, dto.Password);
-            if (userEntity == null) return Unauthorized("Credenciais inválidas");
+            if (authResult == null)
+                return Unauthorized();
 
-            var userDto = _mapper.Map<UserDto>(userEntity);
-            var token = _jwt.GenerateToken(userDto, "User");
-
-            return Ok(token);
+            // authResult já contém o token gerado no serviço
+            return Ok(authResult);
         }
     }
-    }
-
-
-
+}

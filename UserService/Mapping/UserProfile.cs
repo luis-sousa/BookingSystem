@@ -10,6 +10,8 @@ namespace UserService.Mapping
         {
             CreateMap<User, UserDto>();
             CreateMap<UpdateUserDto, User>();
+            CreateMap<CreateUserDto, User>()
+    .ForMember(dest => dest.Role, opt => opt.Ignore()); // se Role não vem do DTO
         }
     }
 }

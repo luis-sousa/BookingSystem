@@ -13,6 +13,7 @@ using System.Text;
 using UserService.Data;
 using UserService.DTOs;
 using UserService.Mapping;
+using UserService.Middleware;
 using UserService.Models;
 using UserService.Repositories;
 using UserService.Services;
@@ -48,19 +49,30 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+
+
 // Add DbContext
-builder.Services.AddDbContext<UserDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+if (!builder.Environment.IsEnvironment("Test"))
+{
+    builder.Services.AddDbContext<UserDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
 
 // Add repositories & services
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+// Aqui você registra seus serviços/repositórios
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserAuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddAutoMapper(typeof(UserProfile));
+
 builder.Services.AddValidatorsFromAssemblyContaining<CreateUserValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<PatchUserValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<LoginValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdatePasswordValidator>();
+
+
 
 // Add controllers & swagger
 builder.Services.AddControllers();
@@ -124,12 +136,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Identity PasswordHasher
-//builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-
-// Aqui você registra seus serviços/repositórios
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-
 var app = builder.Build();
 
 //if (app.Environment.IsProduction())
@@ -178,7 +184,8 @@ if (app.Environment.IsDevelopment())
     //    }
     //}
 }
-
+app.UseMiddleware<ErrorHandlerMiddleware>();
+app.UseRouting();
 app.UseAuthentication();  // <- ESSENCIAL
 app.UseAuthorization();   // <- ESSENCIAL
 
@@ -186,3 +193,5 @@ app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

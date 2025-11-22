@@ -11,9 +11,9 @@ namespace UserService.Services
         Task<UserDto?> GetByIdAsync(int id);
         Task<UserDto> CreateAsync(CreateUserDto dto);
         Task<UserDto?> UpdateAsync(int id, UpdateUserDto dto);
-        Task<UserDto?> PatchAsync(int id, UpdateUserDto dto);
+        Task<UserDto?> PatchAsync(int id, JsonPatchDocument<UpdateUserDto> patch);
         Task<bool> DeleteAsync(int id);
-        Task<bool> EmailExistsAsync(string email);
-        Task<User?> LoginAsync(string email, string password);
+        Task<AuthDto?> LoginAsync(string email, string password);
+        Task<bool> UpdatePasswordAsync(int id, UpdatePasswordDto dto);
     }
 }

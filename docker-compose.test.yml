@@ -1,0 +1,35 @@
+services:
+  user_service:
+    image: userservice:latest
+    ports: ["5001:80"]
+
+  room_service:
+    image: roomservice:latest
+    ports: ["5002:80"]
+
+  reservation_service:
+    image: reservationservice:latest
+    ports: ["5003:80"]
+
+  notification_service:
+    image: notificationservice:latest
+    ports: ["5004:80"]
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      SA_PASSWORD: "Pass@word123"
+      ACCEPT_EULA: "Y"
+    ports: ["1433:1433"]
+
+  redis:
+    image: redis:latest
+    ports: ["6379:6379"]
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports: ["5672:5672", "15672:15672"]
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    ports: ["9092:9092"]
