@@ -1,20 +1,20 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System;
+using Prometheus;
+using Serilog;
+using Serilog.Sinks.Elasticsearch;
 using System.Reflection;
 using System.Text;
 using UserService.Data;
-using UserService.DTOs;
 using UserService.Mapping;
 using UserService.Middleware;
-using UserService.Models;
 using UserService.Repositories;
 using UserService.Services;
 using UserService.Validators;
@@ -49,14 +49,31 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-
-
 // Add DbContext
 if (!builder.Environment.IsEnvironment("Test"))
 {
     builder.Services.AddDbContext<UserDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 }
+
+
+// ===== CONFIGURAÇÃO SERILOG =====
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .Enrich.WithEnvironmentName()
+    .Enrich.WithMachineName()
+    .Enrich.WithThreadId()
+    .WriteTo.Console() // logs no console
+    .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri("http://localhost:9200"))
+    {
+        AutoRegisterTemplate = true,
+        IndexFormat = "userservice-logs-{0:yyyy.MM.dd}"
+    })
+    .ReadFrom.Configuration(builder.Configuration) // permite configurar via appsettings.json
+    .CreateLogger();
+
+// Substituir logger padrão
+builder.Host.UseSerilog();
 
 // Add repositories & services
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -73,10 +90,9 @@ builder.Services.AddValidatorsFromAssemblyContaining<LoginValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdatePasswordValidator>();
 
 
-
 // Add controllers & swagger
 builder.Services.AddControllers();
-builder.Services.AddFluentValidationAutoValidation(); //fui eu que pus por causa do fluent validation
+builder.Services.AddFluentValidationAutoValidation(); //pus por causa do fluent validation
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers().AddNewtonsoftJson();  // habilita suporte a JsonPatchDocument
@@ -137,6 +153,13 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+app.UseSerilogRequestLogging(); // log de requests automáticos
+
+// Middleware do Prometheus
+app.UseHttpMetrics(); // Métricas HTTP automáticas
+
+// Endpoint de métricas
+app.MapMetrics("/metrics");
 
 //if (app.Environment.IsProduction())
 //{

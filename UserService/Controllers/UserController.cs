@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Prometheus;
 using UserService.DTOs;
 using UserService.Services;
 
@@ -14,6 +15,13 @@ namespace UserService.Controllers
     {
         private readonly IUserService _service;
         private readonly IJwtService _jwt;
+
+        private static readonly Counter LoginSuccessCounter = Metrics
+        .CreateCounter("user_login_success_total", "Total de logins bem-sucedidos");
+
+        private static readonly Counter LoginFailureCounter = Metrics
+        .CreateCounter("user_login_failure_total", "Total de logins falhados");
+
 
         public UserController(IUserService service, IJwtService jwt)
         {
@@ -99,9 +107,14 @@ namespace UserService.Controllers
             var authResult = await _service.LoginAsync(dto.Email, dto.Password);
 
             if (authResult == null)
+            {
+                LoginFailureCounter.Inc(); // incrementa métrica
                 return Unauthorized();
 
+            }
+
             // authResult já contém o token gerado no serviço
+            LoginSuccessCounter.Inc(); // incrementa métrica
             return Ok(authResult);
         }
     }

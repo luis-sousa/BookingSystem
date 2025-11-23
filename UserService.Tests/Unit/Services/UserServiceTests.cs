@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.Extensions.Logging;
 using Moq;
 using UserService.DTOs;
 using UserService.Middleware;
@@ -14,6 +15,7 @@ namespace UserService.Tests.Unit.Services
         private readonly Mock<IUserRepository> _repo = new();
         private readonly Mock<IJwtService> _jwt = new();
         private readonly IMapper _mapper;
+        private readonly ILogger<UserAuthService> _logger;
 
         private readonly CreateUserValidator _createValidator = new();
         private readonly UpdateUserValidator _updateValidator = new();
@@ -37,7 +39,8 @@ namespace UserService.Tests.Unit.Services
                 _createValidator,
                 _updateValidator,
                 _passwordValidator,
-                _loginValidator
+                _loginValidator,
+                _logger
             );
 
         // ----------------------------------------------------------

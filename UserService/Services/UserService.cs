@@ -9,6 +9,7 @@ using UserService.Services;
 
 public class UserAuthService : IUserService
 {
+    private readonly ILogger<UserAuthService> _logger;
     private readonly IUserRepository _repo;
     private readonly IJwtService _jwt;
     private readonly IMapper _mapper;
@@ -25,7 +26,8 @@ public class UserAuthService : IUserService
         IValidator<CreateUserDto> createValidator,
         IValidator<UpdateUserDto> updateValidator,
         IValidator<UpdatePasswordDto> passwordValidator,
-        IValidator<LoginDto> loginValidator
+        IValidator<LoginDto> loginValidator,
+        ILogger<UserAuthService> logger
     )
     {
         _repo = repo;
@@ -35,6 +37,7 @@ public class UserAuthService : IUserService
         _updateValidator = updateValidator;
         _passwordValidator = passwordValidator;
         _loginValidator = loginValidator;
+        _logger = logger;
     }
 
     // -------------------- MÉTODOS AUXILIARES --------------------
@@ -43,7 +46,10 @@ public class UserAuthService : IUserService
     {
         var user = await _repo.GetByIdAsync(id);
         if (user == null)
+        {
+            _logger.LogInformation("User Not Found {Username}", user?.Username);
             throw new BusinessException(404, 4001, "Utilizador não encontrado");
+        }
         return user;
     }
 
@@ -61,6 +67,7 @@ public class UserAuthService : IUserService
 
     public async Task<List<UserDto>> GetAllAsync()
     {
+        _logger.LogInformation("A obter todos os utilizadores...");
         var users = await _repo.GetAllAsync();
         return _mapper.Map<List<UserDto>>(users);
     }
@@ -76,7 +83,10 @@ public class UserAuthService : IUserService
         await ValidateDtoAsync(_createValidator, dto);
 
         if (await _repo.EmailExistsAsync(dto.Email))
-            throw new BusinessException(409,4002, "Email já registado");
+        {
+            _logger.LogWarning("Email {Email} já utilizado", dto.Email);
+            throw new BusinessException(409, 4002, "Email já registado");
+        }
 
         var user = _mapper.Map<User>(dto);
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
@@ -98,7 +108,7 @@ public class UserAuthService : IUserService
         return _mapper.Map<UserDto>(user);
     }
 
-    public async Task<UserDto> PatchAsync(int id, JsonPatchDocument<UpdateUserDto> patch)
+    public async Task<UserDto?> PatchAsync(int id, JsonPatchDocument<UpdateUserDto> patch)
     {
         var user = await GetUserOrThrowAsync(id);
         var dto = _mapper.Map<UpdateUserDto>(user);
@@ -122,19 +132,26 @@ public class UserAuthService : IUserService
 
     // -------------------- AUTENTICAÇÃO --------------------
 
-    public async Task<AuthDto> LoginAsync(string email, string password)
+    public async Task<AuthDto?> LoginAsync(string email, string password)
     {
+        _logger.LogInformation("A iniciar o login com {Email} : {Password}", email, password);
+
         var dto = new LoginDto { Email = email, Password = password };
         await ValidateDtoAsync(_loginValidator, dto);
 
         var user = await _repo.GetByEmailAsync(email);
         if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        {
+            _logger.LogWarning("Login inválido");
             throw new BusinessException(404, 4011, "Login inválido");
+        }
 
         var userdto = _mapper.Map<UserDto>(user);
 
         // Geração do JWT
         var token = _jwt.GenerateToken(userdto, user.Role);
+
+        _logger.LogInformation("Token gerado com sucesso {Email} : {Password} - {Token} ", email, password, token);
 
         return new AuthDto
         {
@@ -150,7 +167,10 @@ public class UserAuthService : IUserService
         var user = await GetUserOrThrowAsync(id);
 
         if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+        {
+            _logger.LogWarning("Password atual incorreta");
             throw new BusinessException(400, 4004, "Password atual incorreta");
+        }
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
         await _repo.SaveChangesAsync();

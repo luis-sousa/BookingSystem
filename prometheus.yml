@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 15s  # com que frequencia coletar metricas
+  evaluation_interval: 15s
+
+# Configura onde o Prometheus vai buscar metricas
+scrape_configs:
+  - job_name: 'myapp'
+    static_configs:
+      - targets: ['host.docker.internal:5088'] #access host do docker (my localhost)

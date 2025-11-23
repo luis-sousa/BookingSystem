@@ -149,11 +149,11 @@ namespace UserService.Tests.Integration
                 Email = "invalidpass@test.com",
                 Password = "Test123!"
             };
-            var createResponse = await client.PostAsJsonAsync("/api/v1/User", dto);
+            var createResponse = await client.PostAsJsonAsync("/api/v1/User", dto, cancellationToken: TestContext.Current.CancellationToken);
             createResponse.EnsureSuccessStatusCode();
 
             var loginDto = new LoginDto { Email = dto.Email, Password = "WrongPass" };
-            var loginResponse = await client.PostAsJsonAsync("/api/v1/User/login", loginDto);
+            var loginResponse = await client.PostAsJsonAsync("/api/v1/User/login", loginDto, cancellationToken: TestContext.Current.CancellationToken);
 
             loginResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
@@ -208,7 +208,7 @@ namespace UserService.Tests.Integration
             };
 
             var userId = 1;
-            var patchResponse = await client.PatchAsJsonAsync($"/api/v1/User/{userId}/password", updateDto);
+            var patchResponse = await client.PatchAsJsonAsync($"/api/v1/User/{userId}/password", updateDto, cancellationToken: TestContext.Current.CancellationToken);
             patchResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
@@ -222,7 +222,7 @@ namespace UserService.Tests.Integration
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             var userId = 1;
-            var deleteResponse = await client.DeleteAsync($"/api/v1/User/{userId}");
+            var deleteResponse = await client.DeleteAsync($"/api/v1/User/{userId}", TestContext.Current.CancellationToken);
             deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
         }
 
@@ -236,11 +236,11 @@ namespace UserService.Tests.Integration
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             var nonExistentUserId = 999;
-            var deleteResponse = await client.DeleteAsync($"/api/v1/User/{nonExistentUserId}");
+            var deleteResponse = await client.DeleteAsync($"/api/v1/User/{nonExistentUserId}", TestContext.Current.CancellationToken);
 
             deleteResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-            var error = await deleteResponse.Content.ReadFromJsonAsync<BusinessException>();
+            var error = await deleteResponse.Content.ReadFromJsonAsync<BusinessException>(cancellationToken: TestContext.Current.CancellationToken);
             error!.Code.Should().Be(4001);
             error.Message.Should().Be("Utilizador não encontrado");
         }
@@ -254,9 +254,9 @@ namespace UserService.Tests.Integration
             client.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var deleteResponse = await client.DeleteAsync($"/api/v1/User/1");
+            var deleteResponse = await client.DeleteAsync($"/api/v1/User/1", TestContext.Current.CancellationToken);
 
-            // utulizador autenticado mas sem permissão -> 403 Forbidden
+            // utilizador autenticado mas sem permissão -> 403 Forbidden
             deleteResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
     }
