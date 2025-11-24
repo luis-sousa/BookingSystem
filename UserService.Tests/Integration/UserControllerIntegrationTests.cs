@@ -1,19 +1,11 @@
 ﻿using FluentAssertions;
-using Humanizer;
-using k8s.KubeConfigModels;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Net;
 using System.Net.Http.Json;
-using UserService;
 using UserService.Data;
 using UserService.DTOs;
 using UserService.Middleware;
-using UserService.Models;
-using Xunit;
 
 namespace UserService.Tests.Integration
 {

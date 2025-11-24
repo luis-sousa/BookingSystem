@@ -142,7 +142,7 @@ public class UserAuthService : IUserService
         var user = await _repo.GetByEmailAsync(email);
         if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
         {
-            _logger.LogWarning("Login inválido");
+            _logger.LogInformation("Login inválido {Email} : {Password}", email, password);
             throw new BusinessException(404, 4011, "Login inválido");
         }
 

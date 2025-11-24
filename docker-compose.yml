@@ -87,6 +87,7 @@ services:
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - SERVER_HOST=0.0.0.0
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="12345678901234567890123456789012"
     restart: unless-stopped
   # ==================================================================
   # Prometheus
